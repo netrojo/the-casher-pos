@@ -1,0 +1,90 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>الكاشير - نقطة البيع</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="top">
+    <h1>☕ نقطة البيع</h1>
+    <div id="userArea"></div>
+  </header>
+
+  <main class="container">
+    <section class="left">
+      <div class="searchBar">
+        <input id="searchInput" placeholder="بحث عن المنتجات...">
+        <select id="categoryFilter"><option value="">جميع الفئات</option></select>
+      </div>
+      <div id="productList" class="products"></div>
+    </section>
+
+    <aside class="right">
+      <h2>🛒 الطلب</h2>
+      <div id="posError" class="error-message hidden"></div>
+      <div id="cartItems" class="cartItems"></div>
+      <div class="cartSummary">
+        <div class="summary-row">
+          <span>المجموع الفرعي:</span>
+          <span id="subtotal">0.00</span> ج.م
+        </div>
+        <div class="summary-row">
+          <label>الخصم:</label>
+          <input id="discount" type="number" value="0" min="0" step="0.01">
+        </div>
+        <div class="totalRow">
+          <span>الإجمالي:</span>
+          <span id="total">0.00</span> ج.م
+        </div>
+      </div>
+      <div class="cartActions">
+        <button id="checkoutBtn" class="btn-primary">إتمام الطلب</button>
+        <button id="clearCart" class="btn-secondary">مسح</button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Quantity modal -->
+  <div id="quantityModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>أدخل الكمية</h3>
+      <label>الكمية:</label>
+      <input id="quantityInput" type="number" min="1" value="1" step="1">
+      <label>ملاحظات (اختياري):</label>
+      <input id="notesInput" type="text" placeholder="مثال: بدون سكر">
+      <div id="quantityError" class="error-text hidden"></div>
+      <div class="modal-actions">
+        <button id="confirmQuantity" class="btn-primary">إضافة</button>
+        <button id="cancelQuantity" class="btn-secondary">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checkout modal (simple) -->
+  <div id="checkoutModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>إتمام الطلب</h3>
+      <div>
+        <label>طريقة الدفع:</label>
+        <select id="paymentMethod"><option>نقدي</option><option>بطاقة</option></select>
+      </div>
+      <div id="cashBlock">
+        <label>المبلغ المستلم:</label>
+        <input id="cashReceived" type="number" min="0" step="0.01" value="0">
+        <div>الباقي: <span id="changeGiven">0.00</span> ج.م</div>
+      </div>
+      <div class="modal-actions">
+        <button id="confirmPayment" class="btn-primary">تأكيد</button>
+        <button id="cancelPayment" class="btn-secondary">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receipt view (printable) -->
+  <div id="receiptView" class="hidden"></div>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

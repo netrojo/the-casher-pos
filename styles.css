@@ -1,0 +1,137 @@
+:root {
+  --bg: #f5f5f7;
+  --accent: #6b5b95;
+  --card: #fff;
+  --muted: #666;
+}
+* {
+  box-sizing: border-box;
+  font-family: Segoe UI, Roboto, Arial, sans-serif;
+}
+body {
+  background: var(--bg);
+  margin: 0;
+  color: #222;
+}
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  background: var(--card);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+.container {
+  display: flex;
+  padding: 16px;
+  gap: 16px;
+}
+.left {
+  flex: 1;
+}
+.right {
+  width: 320px;
+  background: var(--card);
+  padding: 12px;
+  border-radius: 6px;
+}
+.searchBar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+input,
+select,
+button {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.products {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.product {
+  background: var(--card);
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+.product .name {
+  font-weight: 600;
+}
+.cartItems {
+  min-height: 120px;
+}
+.cartItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #eee;
+}
+.cartSummary {
+  margin-top: 12px;
+}
+.cartActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.modal {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal.hidden {
+  display: none;
+}
+.modal-content {
+  background: var(--card);
+  padding: 16px;
+  border-radius: 8px;
+  width: 320px;
+}
+.centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+.card {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 8px;
+  width: 320px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+table td,
+table th {
+  padding: 6px;
+  border-bottom: 1px solid #eee;
+}
+.low {
+  background: #fff3f0;
+}
+.container.admin {
+  padding: 24px;
+}
+@media (max-width: 800px) {
+  .container {
+    flex-direction: column;
+  }
+  .right {
+    width: 100%;
+  }
+}

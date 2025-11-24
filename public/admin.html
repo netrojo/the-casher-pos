@@ -1,0 +1,148 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>إدارة المنتجات - نقطة البيع</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="top">
+    <h1>⚙️ إدارة المنتجات</h1>
+    <div><a href="/" class="link-back">رجوع</a></div>
+  </header>
+  <main class="container admin">
+    <section>
+      <h3>المنتجات</h3>
+      <div id="productTable"></div>
+      <h4>إضافة / تعديل منتج</h4>
+      <form id="productForm">
+        <input type="hidden" id="prodId">
+        <label>اسم المنتج</label><input id="prodName" required>
+        <label>الفئة</label><select id="prodCategory"></select>
+        <label>السعر (ج.م)</label><input id="prodPrice" type="number" step="0.01" required>
+        <label>المخزون</label><input id="prodStock" type="number" step="1" required>
+        <div><button type="submit" class="btn-primary">حفظ</button> <button id="cancelEdit" type="button" class="btn-secondary">إلغاء</button></div>
+      </form>
+    
+      <h4>الفئات</h4>
+      <div id="categoriesSection">
+        <div id="categoriesTable"></div>
+        <h5>إضافة / تعديل فئة</h5>
+        <form id="catForm">
+          <input type="hidden" id="catId">
+          <label>اسم الفئة</label>
+          <input id="catName" required>
+          <div style="margin-top:10px"><button id="catSubmit" class="btn-primary">إضافة فئة</button> <button id="catCancel" type="button" class="btn-secondary">إلغاء</button></div>
+        </form>
+      </div>
+    </section>
+  </main>
+  <script>
+    async function fetchJSON(url, opts){ const r=await fetch(url,opts); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+    async function load(){
+      await loadCategories();
+      const prods = await fetchJSON('/api/products');
+      document.getElementById('productTable').innerHTML = `<table><tr><th>اسم المنتج</th><th>الفئة</th><th>السعر</th><th>المخزون</th><th>الإجراءات</th></tr>` + prods.map(p=>`<tr ${p.stock<5? 'class="low"':''}><td>${p.name}</td><td>${p.category||''}</td><td>${p.price.toFixed(2)} ج.م</td><td>${p.stock}</td><td><button data-id="${p.id}" class="edit">تعديل</button> <button data-id="${p.id}" class="del">حذف</button></td></tr>`).join('') + `</table>`;
+      document.querySelectorAll('.edit').forEach(b=>b.addEventListener('click', async (e)=>{
+        const id = e.target.dataset.id; const p = await fetchJSON('/api/products?q=&category=&id='+id); // fallback
+        const prod = (await fetchJSON('/api/products')).find(x=>x.id==id);
+        document.getElementById('prodId').value = prod.id;
+        document.getElementById('prodName').value = prod.name;
+        document.getElementById('prodCategory').value = prod.category_id || '';
+        document.getElementById('prodPrice').value = prod.price;
+        document.getElementById('prodStock').value = prod.stock;
+      }));
+      document.querySelectorAll('.del').forEach(b=>b.addEventListener('click', async (e)=>{
+          if(!confirm('هل تريد حذف هذا المنتج؟')) return; const id=e.target.dataset.id; await fetch('/api/products/'+id,{method:'DELETE'}); load();
+      }));
+    }
+    document.getElementById('productForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const id=document.getElementById('prodId').value; const body={ name:document.getElementById('prodName').value, category_id:document.getElementById('prodCategory').value, price:parseFloat(document.getElementById('prodPrice').value), stock:parseInt(document.getElementById('prodStock').value,10) }; if(id){ await fetch('/api/products/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); } else { await fetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); } await load(); });
+    document.getElementById('cancelEdit').addEventListener('click', ()=>{ document.getElementById('productForm').reset(); document.getElementById('prodId').value=''; });
+    // Categories admin logic
+    let editingCategoryId = null;
+
+    async function loadCategories(){
+      try{
+        const cats = await fetchJSON('/api/categories');
+        const catSel = document.getElementById('prodCategory');
+        catSel.innerHTML = '<option value="">--</option>' + cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+        // render table
+        const tableDiv = document.getElementById('categoriesTable');
+        if(!cats || cats.length===0){
+          tableDiv.innerHTML = '<div class="no-data">لا توجد فئات</div>';
+        } else {
+          tableDiv.innerHTML = `<table><tr><th>ID</th><th>اسم الفئة</th><th>الإجراءات</th></tr>` + cats.map(c=>`<tr><td>${c.id}</td><td>${c.name}</td><td><button data-id="${c.id}" class="edit-cat">تعديل</button> <button data-id="${c.id}" class="del-cat">حذف</button></td></tr>`).join('') + `</table>`;
+        }
+
+        // attach handlers
+        document.querySelectorAll('.edit-cat').forEach(b=>b.addEventListener('click', async (e)=>{
+          const id = e.target.dataset.id;
+          const cat = (await fetchJSON('/api/categories')).find(x=>x.id==id);
+          if(!cat) return;
+          document.getElementById('catName').value = cat.name;
+          editingCategoryId = id;
+          document.getElementById('catSubmit').innerText = 'حفظ';
+        }));
+
+        document.querySelectorAll('.del-cat').forEach(b=>b.addEventListener('click', async (e)=>{
+          const id = e.target.dataset.id;
+          if(!confirm('هل تريد حذف هذه الفئة؟')) return;
+          try{
+            const r = await fetch('/api/categories/'+id, { method: 'DELETE' });
+            const text = await r.text();
+            console.log('DELETE CATEGORY RESPONSE:', r.status, text);
+            if(!r.ok){
+              try{ const j = JSON.parse(text); alert(j.error || 'خطأ في الحذف'); }
+              catch(e){ alert(text || 'خطأ في الحذف'); }
+              return;
+            }
+            await loadCategories();
+            await load();
+          }catch(err){ alert(err.message); }
+        }));
+
+      }catch(err){ console.error(err); if(err.message.includes('401')) window.location='/login.html'; }
+    }
+
+    document.getElementById('catForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name = document.getElementById('catName').value.trim();
+      if(!name) return;
+      try{
+        if(editingCategoryId){
+          const r = await fetch('/api/categories/'+editingCategoryId, { method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+          const text = await r.text();
+          console.log('UPDATE CATEGORY RESPONSE:', r.status, text);
+          if(!r.ok){
+            // try parse json, otherwise show text
+            try{ const j = JSON.parse(text); alert(j.error || 'خطأ'); }
+            catch(e){ alert(text || 'خطأ'); }
+          }
+          editingCategoryId = null;
+          document.getElementById('catSubmit').innerText = 'إضافة فئة';
+        } else {
+          const r = await fetch('/api/categories', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+          const text = await r.text();
+          console.log('ADD CATEGORY RESPONSE:', r.status, text);
+          if(!r.ok){
+            try{ const j = JSON.parse(text); alert(j.error || 'خطأ'); }
+            catch(e){ alert(text || 'خطأ أثناء إضافة الفئة'); }
+            return;
+          }
+          // try parse the JSON body
+          try{ const created = JSON.parse(text); console.log('Created category', created); }
+          catch(e){ console.error('Response not JSON', text); alert('خادم الاستجابة غير صالحة'); return; }
+        }
+        document.getElementById('catForm').reset();
+        await loadCategories();
+        await load();
+      }catch(err){ alert(err.message); }
+    });
+
+    document.getElementById('catCancel').addEventListener('click', ()=>{ document.getElementById('catForm').reset(); editingCategoryId = null; document.getElementById('catSubmit').innerText = 'إضافة فئة'; });
+
+    load().catch(err=>{ console.error(err); if(err.message.includes('401')) window.location='/login.html'; });
+  </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>تسجيل الدخول - نقطة البيع</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="centered">
+  <div class="card">
+    <h2>تسجيل الدخول</h2>
+    <form id="loginForm">
+      <label>البريد الإلكتروني</label>
+      <input id="email" type="email" placeholder="أدخل بريدك الإلكتروني" required>
+      <label>كلمة المرور</label>
+      <input id="password" type="password" placeholder="أدخل كلمة المرور" required>
+      <button type="submit" class="btn-primary">دخول</button>
+    </form>
+  </div>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const res = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+      if(res.ok){ window.location = '/'; } else { alert('بيانات الدخول غير صحيحة'); }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin - Product Management</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="top"><h1>Admin - Product Management</h1><div><a href="/">Back</a></div></header>
+  <main class="container admin">
+    <section>
+      <h3>Products</h3>
+      <div id="productTable"></div>
+      <h4>Add / Edit Product</h4>
+      <form id="productForm">
+        <input type="hidden" id="prodId">
+        <label>Name</label><input id="prodName" required>
+        <label>Category</label><select id="prodCategory"></select>
+        <label>Price</label><input id="prodPrice" type="number" step="0.01" required>
+        <label>Stock</label><input id="prodStock" type="number" step="1" required>
+        <div><button type="submit">Save</button> <button id="cancelEdit" type="button">Cancel</button></div>
+      </form>
+    </section>
+  </main>
+  <script>
+    async function fetchJSON(url, opts){ const r=await fetch(url,opts); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+    async function load(){
+      const cats = await fetchJSON('/api/categories');
+      const catSel = document.getElementById('prodCategory');
+      catSel.innerHTML = cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+      const prods = await fetchJSON('/api/products');
+      document.getElementById('productTable').innerHTML = `<table><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr>` + prods.map(p=>`<tr ${p.stock<5? 'class="low"':''}><td>${p.name}</td><td>${p.category||''}</td><td>${p.price.toFixed(2)}</td><td>${p.stock}</td><td><button data-id="${p.id}" class="edit">Edit</button> <button data-id="${p.id}" class="del">Delete</button></td></tr>`).join('') + `</table>`;
+      document.querySelectorAll('.edit').forEach(b=>b.addEventListener('click', async (e)=>{
+        const id = e.target.dataset.id; const p = await fetchJSON('/api/products?q=&category=&id='+id); // fallback
+        const prod = (await fetchJSON('/api/products')).find(x=>x.id==id);
+        document.getElementById('prodId').value = prod.id;
+        document.getElementById('prodName').value = prod.name;
+        document.getElementById('prodCategory').value = prod.category_id || '';
+        document.getElementById('prodPrice').value = prod.price;
+        document.getElementById('prodStock').value = prod.stock;
+      }));
+      document.querySelectorAll('.del').forEach(b=>b.addEventListener('click', async (e)=>{
+        if(!confirm('Delete?')) return; const id=e.target.dataset.id; await fetch('/api/products/'+id,{method:'DELETE'}); load();
+      }));
+    }
+    document.getElementById('productForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const id=document.getElementById('prodId').value; const body={ name:document.getElementById('prodName').value, category_id:document.getElementById('prodCategory').value, price:parseFloat(document.getElementById('prodPrice').value), stock:parseInt(document.getElementById('prodStock').value,10) }; if(id){ await fetch('/api/products/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); } else { await fetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); } await load(); });
+    document.getElementById('cancelEdit').addEventListener('click', ()=>{ document.getElementById('productForm').reset(); document.getElementById('prodId').value=''; });
+    load().catch(err=>{ console.error(err); if(err.message.includes('401')) window.location='/login.html'; });
+  </script>
+</body>
+</html>
