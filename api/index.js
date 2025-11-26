@@ -4,12 +4,13 @@ const path = require('path');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
-const session = require('express-session');
 const { stringify } = require('csv-stringify');
 const cookieParser = require('cookie-parser');
 
 // Use data folder relative to function dir
-const DATA_DIR = path.join(__dirname, '..', 'data');
+// If running on Vercel (serverless), use /tmp so it's writable; otherwise use project data dir
+const IS_VERCEL = !!process.env.VERCEL;
+const DATA_DIR = IS_VERCEL ? path.join('/tmp', 'data') : path.join(__dirname, '..', 'data');
 const DB_PATH = path.join(DATA_DIR, 'pos.db');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -115,11 +116,21 @@ initDb(process.argv.includes('--seed'))
   });
 
 const app = express();
+app.set('trust proxy', 1); // trust first proxy (Vercel provides forwarded proto)
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(session({ secret: 'pos-secret-key', resave: false, saveUninitialized: true }));
+const cookieSession = require('cookie-session');
+app.use(cookieSession({
+  name: 'pos_session',
+  keys: [process.env.SESSION_KEY || 'pos-secret-key'],
+  // secure cookies on production (Vercel uses HTTPS)
+  secure: process.env.NODE_ENV === 'production' || IS_VERCEL,
+  maxAge: 24 * 60 * 60 * 1000,
+  sameSite: 'lax'
+}));
 
+// cookie-session stores data on req.session as object; keep same checks
 function requireAuth(req,res,next){ if (req.session && req.session.user) return next(); res.status(401).json({ error: 'Unauthorized' }); }
 function requireManager(req,res,next){ if (req.session && req.session.user && req.session.user.role === 'manager') return next(); res.status(403).json({ error: 'Forbidden - manager only' }); }
 
@@ -130,12 +141,13 @@ app.post('/api/login', async (req,res)=>{
   try{
     const user = await get('SELECT id,email,role FROM users WHERE email=? AND password=?',[email,password]);
     if(!user) return res.status(401).json({ error: 'Invalid credentials' });
+    // For cookie-session, assign into req.session
     req.session.user = user;
     res.json({ user });
   }catch(err){ res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/logout', (req,res)=>{ req.session.destroy(()=>res.json({ok:true})); });
+app.post('/api/logout', (req,res)=>{ req.session = null; res.json({ok:true}); });
 app.get('/api/user', (req,res)=>{ res.json({ user: req.session.user || null }); });
 
 // categories
