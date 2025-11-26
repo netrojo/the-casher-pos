@@ -132,18 +132,32 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 const cookieSession = require('cookie-session');
+const SESSION_SECURE = process.env.SESSION_SECURE === 'true' || process.env.NODE_ENV === 'production' || IS_VERCEL;
+const SESSION_SAME_SITE = process.env.SESSION_SAME_SITE || (IS_VERCEL ? 'none' : 'lax');
 app.use(cookieSession({
   name: 'pos_session',
   keys: [process.env.SESSION_KEY || 'pos-secret-key'],
-  // secure cookies on production (Vercel uses HTTPS)
-  secure: process.env.NODE_ENV === 'production' || IS_VERCEL,
+  secure: SESSION_SECURE,
+  httpOnly: true,
+  sameSite: SESSION_SAME_SITE,
   maxAge: 24 * 60 * 60 * 1000,
-  sameSite: 'lax'
+  path: '/'
 }));
 
 // cookie-session stores data on req.session as object; keep same checks
 function requireAuth(req,res,next){ if (req.session && req.session.user) return next(); res.status(401).json({ error: 'Unauthorized' }); }
 function requireManager(req,res,next){ if (req.session && req.session.user && req.session.user.role === 'manager') return next(); res.status(403).json({ error: 'Forbidden - manager only' }); }
+
+// Helper for logging and returning errors
+function routeError(req, res, route, err){
+  console.error(`Error in ${route}:`, err && err.message ? err.message : err);
+  // In dev print stack
+  if(process.env.NODE_ENV !== 'production') console.error(err.stack || err);
+  return res.status(500).json({ error: 'Internal Server Error' });
+}
+
+// Health check
+app.get('/api/_health', (req,res)=>{ res.json({ok:true, vercel: IS_VERCEL}); });
 
 // API Routes
 app.post('/api/login', async (req,res)=>{
@@ -155,11 +169,11 @@ app.post('/api/login', async (req,res)=>{
     // For cookie-session, assign into req.session
     req.session.user = user;
     res.json({ user });
-  }catch(err){ res.status(500).json({ error: err.message }); }
+  }catch(err){ return routeError(req,res,'/api/login', err); }
 });
 
-app.post('/api/logout', (req,res)=>{ req.session = null; res.json({ok:true}); });
-app.get('/api/user', (req,res)=>{ res.json({ user: req.session.user || null }); });
+app.post('/api/logout', (req,res)=>{ try{ req.session = null; res.json({ok:true}); }catch(err){ return routeError(req,res,'/api/logout', err); } });
+app.get('/api/user', (req,res)=>{ try{ res.json({ user: req.session.user || null }); }catch(err){ return routeError(req,res,'/api/user', err); } });
 
 // categories
 app.get('/api/categories', async (req,res)=>{ try{ const rows = await all('SELECT * FROM categories ORDER BY name'); res.json(rows); }catch(err){ res.status(500).json({ error: err.message }); } });

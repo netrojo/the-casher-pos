@@ -89,7 +89,7 @@
           const id = e.target.dataset.id;
           if(!confirm('هل تريد حذف هذه الفئة؟')) return;
           try{
-            const r = await fetch('/api/categories/'+id, { method: 'DELETE' });
+            const r = await fetch('/api/categories/'+id, { method: 'DELETE', credentials: 'same-origin' });
             const text = await r.text();
             console.log('DELETE CATEGORY RESPONSE:', r.status, text);
             if(!r.ok){
