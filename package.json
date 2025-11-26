@@ -18,6 +18,7 @@
     "sqlite3": "^5.1.6",
     "express-session": "^1.17.3",
     "body-parser": "^1.20.2",
-    "csv-stringify": "^6.2.0"
+    "csv-stringify": "^6.2.0",
+    "cookie-parser": "^1.4.6"
   }
 }
