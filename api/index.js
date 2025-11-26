@@ -10,11 +10,22 @@ const cookieParser = require('cookie-parser');
 // Use data folder relative to function dir
 // If running on Vercel (serverless), use /tmp so it's writable; otherwise use project data dir
 const IS_VERCEL = !!process.env.VERCEL;
-const DATA_DIR = IS_VERCEL ? path.join('/tmp', 'data') : path.join(__dirname, '..', 'data');
+const REPO_DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = IS_VERCEL ? path.join('/tmp', 'data') : REPO_DATA_DIR;
 const DB_PATH = path.join(DATA_DIR, 'pos.db');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+// If we're on Vercel, copy the bundled DB from the repository to the tmp dir so it's writable
+if (IS_VERCEL) {
+  const bundledDb = path.join(REPO_DATA_DIR, 'pos.db');
+  try{
+    if (fs.existsSync(bundledDb) && !fs.existsSync(DB_PATH)) {
+      fs.copyFileSync(bundledDb, DB_PATH);
+      console.log('Copied bundled DB to', DB_PATH);
+    }
+  }catch(e){ console.warn('Could not copy DB to tmp:', e.message); }
+}
 
 const db = new sqlite3.Database(DB_PATH);
 const run = (sql, params = []) => new Promise((res, rej) => db.run(sql, params, function(err){ if(err) rej(err); else res(this); }));

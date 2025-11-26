@@ -39,7 +39,7 @@
     </section>
   </main>
   <script>
-    async function fetchJSON(url, opts){ const r=await fetch(url,opts); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+    async function fetchJSON(url, opts){ opts = opts || {}; if(!opts.credentials) opts.credentials = 'same-origin'; const r=await fetch(url,opts); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
     async function load(){
       await loadCategories();
       const prods = await fetchJSON('/api/products');
@@ -54,10 +54,10 @@
         document.getElementById('prodStock').value = prod.stock;
       }));
       document.querySelectorAll('.del').forEach(b=>b.addEventListener('click', async (e)=>{
-          if(!confirm('هل تريد حذف هذا المنتج؟')) return; const id=e.target.dataset.id; await fetch('/api/products/'+id,{method:'DELETE'}); load();
+          if(!confirm('هل تريد حذف هذا المنتج؟')) return; const id=e.target.dataset.id; await fetch('/api/products/'+id,{method:'DELETE', credentials: 'same-origin'}); load();
       }));
     }
-    document.getElementById('productForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const id=document.getElementById('prodId').value; const body={ name:document.getElementById('prodName').value, category_id:document.getElementById('prodCategory').value, price:parseFloat(document.getElementById('prodPrice').value), stock:parseInt(document.getElementById('prodStock').value,10) }; if(id){ await fetch('/api/products/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); } else { await fetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); } await load(); });
+    document.getElementById('productForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const id=document.getElementById('prodId').value; const body={ name:document.getElementById('prodName').value, category_id:document.getElementById('prodCategory').value, price:parseFloat(document.getElementById('prodPrice').value), stock:parseInt(document.getElementById('prodStock').value,10) }; if(id){ await fetch('/api/products/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body), credentials: 'same-origin'}); } else { await fetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body), credentials: 'same-origin'}); } await load(); });
     document.getElementById('cancelEdit').addEventListener('click', ()=>{ document.getElementById('productForm').reset(); document.getElementById('prodId').value=''; });
     // Categories admin logic
     let editingCategoryId = null;
@@ -111,7 +111,7 @@
       if(!name) return;
       try{
         if(editingCategoryId){
-          const r = await fetch('/api/categories/'+editingCategoryId, { method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+          const r = await fetch('/api/categories/'+editingCategoryId, { method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }), credentials: 'same-origin' });
           const text = await r.text();
           console.log('UPDATE CATEGORY RESPONSE:', r.status, text);
           if(!r.ok){
@@ -122,7 +122,7 @@
           editingCategoryId = null;
           document.getElementById('catSubmit').innerText = 'إضافة فئة';
         } else {
-          const r = await fetch('/api/categories', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+          const r = await fetch('/api/categories', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }), credentials: 'same-origin' });
           const text = await r.text();
           console.log('ADD CATEGORY RESPONSE:', r.status, text);
           if(!r.ok){

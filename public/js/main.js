@@ -1,5 +1,7 @@
 // Main frontend logic for Cafe POS - Arabic Version with EGP
 async function api(path, opts) {
+  opts = opts || {};
+  if (!opts.credentials) opts.credentials = 'same-origin';
   const res = await fetch(path, opts);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
@@ -26,12 +28,12 @@ function hideError(){
 
 async function init(){
   // check user
-  const user = await fetch('/api/user').then(r=>r.json()).catch(()=>({}));
+  const user = await api('/api/user').catch(()=>({}));
   const userArea = document.getElementById('userArea');
   if(user && user.user){
     const role = user.user.role === 'manager' ? 'مدير' : 'كاشير';
     userArea.innerHTML = `<span>${user.user.email} (${role})</span> <button id="logoutBtn">تسجيل الخروج</button> ${user.user.role==='manager'? '<a href="/admin.html">⚙️ إدارة</a> <a href="/orders.html">📊 تقارير</a>':''}`;
-    document.getElementById('logoutBtn').addEventListener('click', ()=>fetch('/api/logout',{method:'POST'}).then(()=>location='/login.html'));
+    document.getElementById('logoutBtn').addEventListener('click', ()=>api('/api/logout', { method:'POST' }).then(()=>location='/login.html'));
   } else { location = '/login.html'; return; }
 
   // load categories
