@@ -8,24 +8,15 @@ const { stringify } = require('csv-stringify');
 const cookieParser = require('cookie-parser');
 
 // Use data folder relative to function dir
-// If running on Vercel (serverless), use /tmp so it's writable; otherwise use project data dir
-const IS_VERCEL = !!process.env.VERCEL;
+// If running in production (Vercel uses NODE_ENV=production), use /tmp which is writable; 
+// otherwise use the repository data folder for local dev.
+const IS_PROD = process.env.NODE_ENV === 'production';
 const REPO_DATA_DIR = path.join(__dirname, '..', 'data');
-const DATA_DIR = IS_VERCEL ? path.join('/tmp', 'data') : REPO_DATA_DIR;
+const DATA_DIR = IS_PROD ? path.join('/tmp') : REPO_DATA_DIR;
 const DB_PATH = path.join(DATA_DIR, 'pos.db');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-// If we're on Vercel, copy the bundled DB from the repository to the tmp dir so it's writable
-if (IS_VERCEL) {
-  const bundledDb = path.join(REPO_DATA_DIR, 'pos.db');
-  try{
-    if (fs.existsSync(bundledDb) && !fs.existsSync(DB_PATH)) {
-      fs.copyFileSync(bundledDb, DB_PATH);
-      console.log('Copied bundled DB to', DB_PATH);
-    }
-  }catch(e){ console.warn('Could not copy DB to tmp:', e.message); }
-}
 
 const db = new sqlite3.Database(DB_PATH);
 const run = (sql, params = []) => new Promise((res, rej) => db.run(sql, params, function(err){ if(err) rej(err); else res(this); }));
@@ -119,12 +110,19 @@ async function ensureCashierUser() {
 }
 
 // Initialize DB on function cold-start
-initDb(process.argv.includes('--seed'))
-  .then(() => ensureCashierUser())
-  .then(() => console.log('DB initialized and cashier ensured'))
-  .catch(err => {
-    console.error('DB init error', err);
-  });
+// If running in production (Vercel), always seed the DB (initDb(true)) so tables and demo data exist in /tmp
+if (IS_PROD) {
+  initDb(true)
+    .then(() => ensureCashierUser())
+    .then(() => console.log('DB initialized (prod) and cashier ensured'))
+    .catch(err => console.error('DB init error (prod):', err));
+} else {
+  // Local dev: only seed when explicitly requested, or if DB is empty
+  initDb(process.argv.includes('--seed'))
+    .then(() => ensureCashierUser())
+    .then(() => console.log('DB initialized and cashier ensured'))
+    .catch(err => console.error('DB init error:', err));
+}
 
 const app = express();
 app.set('trust proxy', 1); // trust first proxy (Vercel provides forwarded proto)
@@ -163,13 +161,15 @@ app.get('/api/_health', (req,res)=>{ res.json({ok:true, vercel: IS_VERCEL}); });
 app.post('/api/login', async (req,res)=>{
   const { email, password } = req.body;
   if(!email || !password) return res.status(400).json({ error: 'Missing credentials' });
-  try{
+  try {
     const user = await get('SELECT id,email,role FROM users WHERE email=? AND password=?',[email,password]);
-    if(!user) return res.status(401).json({ error: 'Invalid credentials' });
-    // For cookie-session, assign into req.session
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     req.session.user = user;
-    res.json({ user });
-  }catch(err){ return routeError(req,res,'/api/login', err); }
+    return res.json({ user });
+  } catch (err) {
+    console.error('LOGIN ERROR:', err);
+    return res.status(500).json({ error: 'Internal error: ' + (err && err.message ? err.message : 'unknown') });
+  }
 });
 
 app.post('/api/logout', (req,res)=>{ try{ req.session = null; res.json({ok:true}); }catch(err){ return routeError(req,res,'/api/logout', err); } });
