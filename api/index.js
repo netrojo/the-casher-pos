@@ -11,6 +11,7 @@ const cookieParser = require('cookie-parser');
 // If running in production (Vercel uses NODE_ENV=production), use /tmp which is writable; 
 // otherwise use the repository data folder for local dev.
 const IS_PROD = process.env.NODE_ENV === 'production';
+const IS_VERCEL = !!process.env.VERCEL;
 const REPO_DATA_DIR = path.join(__dirname, '..', 'data');
 const DATA_DIR = IS_PROD ? path.join('/tmp') : REPO_DATA_DIR;
 const DB_PATH = path.join(DATA_DIR, 'pos.db');

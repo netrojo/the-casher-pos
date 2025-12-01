@@ -22,8 +22,15 @@
       e.preventDefault();
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      const res = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password}), credentials: 'same-origin'});
-      if(res.ok){ window.location = '/'; } else { alert('بيانات الدخول غير صحيحة'); }
+      let res;
+      try{
+        res = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password}), credentials: 'same-origin'});
+      }catch(err){ alert('حدث خطأ في الاتصال بالخادم'); return; }
+      if(res.ok){ window.location = '/'; }
+      else if(res.status === 401){ alert('بيانات الدخول غير صحيحة'); }
+      else if(res.status === 400){ alert('الرجاء تعبئة جميع الحقول'); }
+      else if(res.status >= 500){ alert('حدث خطأ في الخادم'); }
+      else { alert('فشل تسجيل الدخول'); }
     });
   </script>
 </body>
